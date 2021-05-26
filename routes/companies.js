@@ -17,10 +17,10 @@ router.get('/', async (req, res, next)=>{
 router.get('/:code', async (req, res, next)=>{
     const code = req.params.code;
     try {
-        const results = await db.query(`SELECT code, name, description FROM companies WHERE code=$1`, [code]); 
-        const comp = results.rows[0];
-
-        const invoiceResults = await db.query('SELECT id FROM invoices WHERE comp_code=$1', [comp.code]);
+        let companyResults =  db.query(`SELECT code, name, description FROM companies WHERE code=$1`, [code]); 
+        let invoiceResults =  db.query('SELECT id FROM invoices WHERE comp_code=$1', [code]);
+        [companyResults, invoiceResults] = await Promise.all([companyResults, invoiceResults]); 
+        const comp = companyResults.rows[0];
         let invoices = invoiceResults.rows;  
         invoices = invoices.map(o => o.id); 
 
