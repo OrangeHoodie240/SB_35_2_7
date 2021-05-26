@@ -18,10 +18,13 @@ router.get('/:code', async (req, res, next)=>{
     const code = req.params.code;
     try {
         const results = await db.query(`SELECT code, name, description FROM companies WHERE code=$1`, [code]); 
-        if(results.rows.length < 1){
-        }
-        const row = results.rows[0];
-        return res.json({company: {code: row.code, name: row.name, description: row.description}});
+        const comp = results.rows[0];
+
+        const invoiceResults = await db.query('SELECT id FROM invoices WHERE comp_code=$1', [comp.code]);
+        let invoices = invoiceResults.rows;  
+        invoices = invoices.map(o => o.id); 
+
+        return res.json({company: {...comp, invoices}});
     }
     catch {
             return next((new ExpressError(`Company with code ${code} does not exist`, 404)));
@@ -63,11 +66,14 @@ router.put('/:code', async (req, res, next)=>{
 router.delete('/:code', async (req, res, next)=>{
     const code = req.params.code; 
     try {
-        const results = db.query('DELETE FROM companies WHERE code=$1', [code]);
+        const results = await db.query('DELETE FROM companies WHERE code=$1 RETURNING code', [code]);
+        if(results.rows.length < 1){
+            throw new ExpressError(`Company with code ${code} does not exist`, 404)
+        }
         return res.json({'status': 'deleted'});
     }
-    catch {
-        return next((new ExpressError(`Company with code ${code} does not exist`, 404)));
+    catch(err) {
+        return next(err);
     }
 });
 
